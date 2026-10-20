@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GradVolt Web 3D | Física Computacional Sears-Zemansky</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+            },
+            darkBg: '#090d16',
+            cardBg: 'rgba(15, 23, 42, 0.78)',
+            borderGlow: 'rgba(56, 189, 248, 0.25)',
+            posCharge: '#f43f5e',
+            negCharge: '#06b6d4',
+            gaussCircle: '#10b981'
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'Fira Code', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Plotly.js CDN -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+  <!-- KaTeX for crisp mathematical formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+
+  <!-- Custom Styles -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-darkBg text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- ================= TOP BAR ================= -->
+  <header class="border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-40 px-4 py-2.5">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- Brand Logo & Title -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 via-indigo-600 to-pink-500 flex items-center justify-center shadow-lg shadow-brand-500/20 ring-1 ring-white/20">
+          <i class="fa-solid fa-atom text-white text-xl animate-spin-slow"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-lg font-extrabold tracking-tight bg-gradient-to-r from-sky-400 via-indigo-300 to-rose-400 bg-clip-text text-transparent">
+              GradVolt Web 3D
+            </h1>
+            <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-brand-500/10 text-brand-400 border border-brand-500/20">
+              Sears-Zemansky
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 hidden sm:block">
+            Simulador de Electrostática: Potencial 3D, Gradiente $\vec{E} = -\nabla V$ y Ley de Gauss
+          </p>
+        </div>
+      </div>
+
+      <!-- Quick Fair Scenarios (Escenarios Rápidos para la Feria) -->
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="text-xs font-semibold text-slate-400 mr-1 flex items-center gap-1.5 hidden md:flex">
+          <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i>
+          Feria:
+        </span>
+        
+        <button id="btn-scenario-1" class="scenario-btn group relative px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 border border-slate-700/80 hover:border-amber-400/60 hover:bg-slate-800/80 transition-all flex items-center gap-1.5 shadow-sm" title="Configura 1 carga puntual en el origen para verificar la ley del inverso del cuadrado">
+          <span class="w-2 h-2 rounded-full bg-amber-400 group-hover:animate-ping"></span>
+          <span>Reto 1: Ley Inverso Cuadrado</span>
+        </button>
+
+        <button id="btn-scenario-2" class="scenario-btn group relative px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 border border-slate-700/80 hover:border-emerald-400/60 hover:bg-slate-800/80 transition-all flex items-center gap-1.5 shadow-sm" title="Una carga interna y una externa para demostrar que variar R no altera el flujo gaussiano">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 group-hover:animate-ping"></span>
+          <span>Reto 2: Paradoja Esfera Gauss</span>
+        </button>
+
+        <button id="btn-scenario-3" class="scenario-btn group relative px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 border border-slate-700/80 hover:border-sky-400/60 hover:bg-slate-800/80 transition-all flex items-center gap-1.5 shadow-sm" title="Dipolo eléctrico simétrico donde V=0 en el plano medio pero el campo E es máximo">
+          <span class="w-2 h-2 rounded-full bg-sky-400 group-hover:animate-ping"></span>
+          <span>Reto 3: Dipolo (V=0, E≠0)</span>
+        </button>
+
+        <!-- Help / Info Modal Trigger -->
+        <button id="btn-open-theory" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors border border-slate-800" title="Ver Fundamento Físico y Fórmulas">
+          <i class="fa-solid fa-circle-question text-base"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ================= MAIN LAYOUT ================= -->
+  <div class="flex-1 max-w-7xl w-full mx-auto p-3 sm:p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- ================= SIDEBAR: GLOBAL CONTROLS ================= -->
+    <aside class="lg:col-span-4 xl:col-span-3.5 space-y-4">
+
+      <!-- Charge 1 Control Card -->
+      <div class="glass-card rounded-2xl p-4 border border-rose-500/20 relative overflow-hidden">
+        <div class="absolute -right-6 -top-6 w-24 h-24 bg-rose-500/10 rounded-full blur-xl pointer-events-none"></div>
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]"></span>
+            <h2 class="text-sm font-bold tracking-wide text-rose-300">Carga Puntual $q_1$</h2>
+          </div>
+          <span id="q1-badge" class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30">
+            +5.0 nC
+          </span>
+        </div>
+
+        <div class="space-y-3">
+          <!-- q1 magnitude -->
+          <div>
+            <div class="flex justify-between text-xs text-slate-400 mb-1">
+              <span>Magnitud ($q_1$)</span>
+              <span class="font-mono text-slate-300" id="q1-val">+5.0 nC</span>
+            </div>
+            <input type="range" id="slider-q1" min="-10" max="10" step="0.5" value="5" class="w-full range-slider accent-rose-500">
+            <div class="flex justify-between text-[10px] text-slate-500 font-mono mt-0.5">
+              <span>-10 nC</span>
+              <span>0</span>
+              <span>+10 nC</span>
+            </div>
+          </div>
+
+          <!-- Position (x1, y1) -->
+          <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800">
+            <div>
+              <div class="flex justify-between text-[11px] text-slate-400 mb-0.5">
+                <span>Pos $x_1$</span>
+                <span class="font-mono text-slate-300" id="x1-val">-0.40 m</span>
+              </div>
+              <input type="range" id="slider-x1" min="-0.9" max="0.9" step="0.05" value="-0.4" class="w-full range-slider accent-rose-500">
+            </div>
+            <div>
+              <div class="flex justify-between text-[11px] text-slate-400 mb-0.5">
+                <span>Pos $y_1$</span>
+                <span class="font-mono text-slate-300" id="y1-val">0.00 m</span>
+              </div>
+              <input type="range" id="slider-y1" min="-0.9" max="0.9" step="0.05" value="0.0" class="w-full range-slider accent-rose-500">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charge 2 Control Card -->
+      <div class="glass-card rounded-2xl p-4 border border-cyan-500/20 relative overflow-hidden">
+        <div class="absolute -right-6 -top-6 w-24 h-24 bg-cyan-500/10 rounded-full blur-xl pointer-events-none"></div>
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.8)]"></span>
+            <h2 class="text-sm font-bold tracking-wide text-cyan-300">Carga Puntual $q_2$</h2>
+          </div>
+          <span id="q2-badge" class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+            -5.0 nC
+          </span>
+        </div>
+
+        <div class="space-y-3">
+          <!-- q2 magnitude -->
+          <div>
+            <div class="flex justify-between text-xs text-slate-400 mb-1">
+              <span>Magnitud ($q_2$)</span>
+              <span class="font-mono text-slate-300" id="q2-val">-5.0 nC</span>
+            </div>
+            <input type="range" id="slider-q2" min="-10" max="10" step="0.5" value="-5" class="w-full range-slider accent-cyan-400">
+            <div class="flex justify-between text-[10px] text-slate-500 font-mono mt-0.5">
+              <span>-10 nC</span>
+              <span>0</span>
+              <span>+10 nC</span>
+            </div>
+          </div>
+
+          <!-- Position (x2, y2) -->
+          <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800">
+            <div>
+              <div class="flex justify-between text-[11px] text-slate-400 mb-0.5">
+                <span>Pos $x_2$</span>
+                <span class="font-mono text-slate-300" id="x2-val">0.40 m</span>
+              </div>
+              <input type="range" id="slider-x2" min="-0.9" max="0.9" step="0.05" value="0.4" class="w-full range-slider accent-cyan-400">
+            </div>
+            <div>
+              <div class="flex justify-between text-[11px] text-slate-400 mb-0.5">
+                <span>Pos $y_2$</span>
+                <span class="font-mono text-slate-300" id="y2-val">0.00 m</span>
+              </div>
+              <input type="range" id="slider-y2" min="-0.9" max="0.9" step="0.05" value="0.0" class="w-full range-slider accent-cyan-400">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gaussian Surface Radius & Parameters -->
+      <div class="glass-card rounded-2xl p-4 border border-emerald-500/20 relative overflow-hidden">
+        <div class="flex items-center justify-between mb-3">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
+            <h2 class="text-sm font-bold tracking-wide text-emerald-300">Superficie de Gauss</h2>
+          </div>
+          <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" id="gauss-r-badge">
+            R = 0.50 m
+          </span>
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex justify-between text-xs text-slate-400">
+            <span>Radio de la Esfera / Círculo ($R$)</span>
+            <span class="font-mono text-slate-300" id="radius-val">0.50 m</span>
+          </div>
+          <input type="range" id="slider-radius" min="0.10" max="0.90" step="0.02" value="0.50" class="w-full range-slider accent-emerald-400">
+          <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+            <span>0.10 m</span>
+            <span>0.50 m</span>
+            <span>0.90 m</span>
+          </div>
+          <p class="text-[11px] text-slate-400 italic pt-1">
+            Centrada en $(0,0)$. Permite verificar empíricamente la Ley de Gauss en el Módulo 3.
+          </p>
+        </div>
+      </div>
+
+      <!-- CSV Data Management Card -->
+      <div class="glass-card rounded-2xl p-4 border border-slate-800 space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+            <i class="fa-solid fa-file-csv text-brand-400"></i>
+            Datos & Persistencia
+          </h2>
+          <span class="text-[10px] text-slate-500 font-mono">Malla 41×41</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <!-- Export Button -->
+          <button id="btn-export-csv" class="w-full py-2 px-3 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700 hover:border-brand-500/50 text-slate-200 text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-sm group">
+            <i class="fa-solid fa-download text-brand-400 group-hover:translate-y-0.5 transition-transform"></i>
+            <span>Exportar CSV</span>
+          </button>
+
+          <!-- Import Button Label wrapping input -->
+          <label for="input-import-csv" class="w-full py-2 px-3 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 border border-slate-700 hover:border-indigo-500/50 text-slate-200 text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer transition-all shadow-sm group">
+            <i class="fa-solid fa-upload text-indigo-400 group-hover:-translate-y-0.5 transition-transform"></i>
+            <span>Importar CSV</span>
+            <input type="file" id="input-import-csv" accept=".csv" class="hidden">
+          </label>
+        </div>
+        <p class="text-[10px] text-slate-500 text-center">
+          Exporta o carga la malla escalar $(x, y, V)$ para reconstruir el potencial y campo eléctrico.
+        </p>
+      </div>
+
+      <!-- Grid Resolution / Quick Reset -->
+      <div class="flex items-center justify-between text-xs px-2 text-slate-400">
+        <div class="flex items-center gap-1.5">
+          <i class="fa-solid fa-microchip text-slate-500"></i>
+          <span>Malla:</span>
+          <select id="select-resolution" class="bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
+            <option value="31">31 × 31 (Rápida)</option>
+            <option value="41" selected>41 × 41 (Equilibrada)</option>
+            <option value="51">51 × 51 (Alta Resolución)</option>
+          </select>
+        </div>
+        <button id="btn-reset-defaults" class="text-xs text-slate-400 hover:text-white transition-colors underline decoration-slate-700">
+          Restablecer
+        </button>
+      </div>
+
+    </aside>
+
+    <!-- ================= MAIN WORKSPACE CANVAS ================= -->
+    <main class="lg:col-span-8 xl:col-span-8.5 flex flex-col space-y-4">
+
+      <!-- Navigation Tabs (Sears & Zemansky Chapters 21, 22, 23) -->
+      <div class="flex flex-wrap items-center gap-2 border-b border-slate-800/90 pb-2">
+        
+        <!-- Tab 1 Button -->
+        <button id="tab-btn-1" class="tab-btn active px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all" data-tab="module-1">
+          <i class="fa-solid fa-mountain text-brand-400"></i>
+          <span>Módulo 1: Potencial 3D</span>
+          <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-mono">Cap. 23</span>
+        </button>
+
+        <!-- Tab 2 Button -->
+        <button id="tab-btn-2" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all" data-tab="module-2">
+          <i class="fa-solid fa-arrows-split-up-and-left text-pink-400"></i>
+          <span>Módulo 2: Campo $\vec{E} = -\nabla V$</span>
+          <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-mono">Cap. 21 / §23.5</span>
+        </button>
+
+        <!-- Tab 3 Button -->
+        <button id="tab-btn-3" class="tab-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-all" data-tab="module-3">
+          <i class="fa-solid fa-circle-notch text-emerald-400"></i>
+          <span>Módulo 3: Ley de Gauss</span>
+          <span class="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-mono">Cap. 22</span>
+        </button>
+
+      </div>
+
+      <!-- ================= MODULE 1: POTENCIAL ELÉCTRICO Y SUPERFICIE 3D ================= -->
+      <section id="module-1" class="module-tab-content space-y-4">
+        
+        <!-- Controls & Metrics Bar -->
+        <div class="glass-card rounded-2xl p-4 border border-slate-800 flex flex-wrap items-center justify-between gap-3">
+          <!-- View switch buttons -->
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-semibold text-slate-400">Visualización:</span>
+            <div class="bg-slate-900 p-1 rounded-xl border border-slate-800 flex gap-1">
+              <button id="btn-view-3d" class="px-3 py-1 rounded-lg text-xs font-medium bg-brand-600 text-white shadow transition-all flex items-center gap-1.5">
+                <i class="fa-solid fa-cube"></i>
+                Superficie 3D
+              </button>
+              <button id="btn-view-contour" class="px-3 py-1 rounded-lg text-xs font-medium text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+                <i class="fa-solid fa-layer-group"></i>
+                Curvas Equipotenciales (2D)
+              </button>
+            </div>
+          </div>
+
+          <!-- Color palette selector -->
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400">Paleta:</span>
+            <select id="select-colorscale" class="bg-slate-900 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-300 focus:outline-none focus:border-brand-500">
+              <option value="Electric" selected>Electric (Neón)</option>
+              <option value="Viridis">Viridis (Científico)</option>
+              <option value="Plasma">Plasma (Térmico)</option>
+              <option value="RdBu">Rojo-Azul (Bipolar)</option>
+              <option value="Portland">Portland</option>
+            </select>
+          </div>
+
+          <!-- Metrics summary -->
+          <div class="flex items-center gap-4 text-xs font-mono">
+            <div>
+              <span class="text-slate-500">V_max:</span>
+              <span id="m1-vmax" class="text-rose-400 font-semibold">+0.0 V</span>
+            </div>
+            <div>
+              <span class="text-slate-500">V_min:</span>
+              <span id="m1-vmin" class="text-cyan-400 font-semibold">-0.0 V</span>
+            </div>
+            <div>
+              <span class="text-slate-500">V(0,0):</span>
+              <span id="m1-vorigin" class="text-amber-300 font-semibold">0.0 V</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Plotly Plot Container -->
+        <div class="glass-card rounded-2xl p-2 sm:p-3 border border-slate-800 relative">
+          <div id="plot-module-1" class="w-full h-[500px] rounded-xl overflow-hidden"></div>
+          
+          <!-- Interactive helper tag -->
+          <div class="absolute bottom-4 left-4 pointer-events-none bg-slate-950/80 backdrop-blur px-2.5 py-1 rounded-md border border-slate-800 text-[11px] text-slate-400 flex items-center gap-2">
+            <i class="fa-solid fa-hand-pointer text-brand-400"></i>
+            <span>Arrastra para rotar en 3D | Rueda para zoom | Doble clic para reiniciar</span>
+          </div>
+        </div>
+
+        <!-- Table Preview for CSV Data (Collapsible) -->
+        <div class="glass-card rounded-2xl p-4 border border-slate-800 space-y-3">
+          <div class="flex items-center justify-between cursor-pointer select-none" id="toggle-table-btn">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-table text-indigo-400"></i>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">
+                Vista Previa de la Matriz de Potencial $V(x,y)$
+              </h3>
+              <span class="text-[10px] text-slate-500 font-mono" id="table-points-count">(1,681 celdas)</span>
+            </div>
+            <i class="fa-solid fa-chevron-down text-xs text-slate-400 transition-transform duration-200" id="table-chevron"></i>
+          </div>
+
+          <div id="table-container" class="hidden space-y-2 pt-2 border-t border-slate-800/80">
+            <div class="overflow-x-auto max-h-56 rounded-lg border border-slate-800">
+              <table class="w-full text-left text-xs font-mono text-slate-300">
+                <thead class="bg-slate-900/90 text-slate-400 uppercase text-[10px] sticky top-0 border-b border-slate-800">
+                  <tr>
+                    <th class="px-3 py-2">Fila #</th>
+                    <th class="px-3 py-2">x (m)</th>
+                    <th class="px-3 py-2">y (m)</th>
+                    <th class="px-3 py-2">Potencial V (Voltios)</th>
+                  </tr>
+                </thead>
+                <tbody id="csv-preview-body" class="divide-y divide-slate-800/50">
+                  <!-- Dynamically populated -->
+                </tbody>
+              </table>
+            </div>
+            <p class="text-[11px] text-slate-400 flex items-center justify-between">
+              <span>Mostrando las primeras 15 coordenadas de la malla actual.</span>
+              <button id="btn-export-csv-sub" class="text-brand-400 hover:underline">Descargar CSV Completo</button>
+            </p>
+          </div>
+        </div>
+
+        <!-- Physics Callout (Capítulo 23) -->
+        <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300 leading-relaxed flex items-start gap-3">
+          <i class="fa-solid fa-graduation-cap text-lg text-brand-400 mt-0.5"></i>
+          <div>
+            <span class="font-semibold text-white">Principio Físico (Sears & Zemansky Cap. 23 - Potencial Eléctrico):</span>
+            El potencial eléctrico escalar es aditivo $V(x,y) = \sum_{i} \frac{k q_i}{r_i}$, donde $k \approx 8.988 \times 10^9\,\text{N}\cdot\text{m}^2/\text{C}^2$. La superficie 3D ilustra las "colinas" de potencial creadas por cargas positivas y los "pozos" de potencial generados por cargas negativas. Las curvas de nivel 2D representan las superficies equipotenciales donde el trabajo para mover una carga es nulo.
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================= MODULE 2: CAMPO ELÉCTRICO VÍA GRADIENTE Y LEY DE COULOMB ================= -->
+      <section id="module-2" class="module-tab-content hidden space-y-4">
+        
+        <!-- Coulomb Force & Distance Live Cards Ribbon -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          
+          <!-- Distance Card -->
+          <div class="glass-card rounded-xl p-3 border border-slate-800 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-lg">
+              <i class="fa-solid fa-ruler"></i>
+            </div>
+            <div>
+              <div class="text-[11px] text-slate-400">Distancia $r_{12}$</div>
+              <div id="coulomb-dist" class="text-sm font-mono font-bold text-white">0.800 m</div>
+            </div>
+          </div>
+
+          <!-- Coulomb Force Card -->
+          <div class="glass-card rounded-xl p-3 border border-slate-800 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400 text-lg">
+              <i class="fa-solid fa-magnet"></i>
+            </div>
+            <div>
+              <div class="text-[11px] text-slate-400">Fuerza de Coulomb $F_{12}$</div>
+              <div id="coulomb-force" class="text-sm font-mono font-bold text-white">3.51 × 10⁻⁷ N</div>
+            </div>
+          </div>
+
+          <!-- Force Nature Card -->
+          <div class="glass-card rounded-xl p-3 border border-slate-800 flex items-center gap-3">
+            <div id="coulomb-nature-icon" class="w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center text-cyan-400 text-lg">
+              <i class="fa-solid fa-arrow-right-arrow-left"></i>
+            </div>
+            <div>
+              <div class="text-[11px] text-slate-400">Naturaleza de la Interacción</div>
+              <div id="coulomb-nature" class="text-xs font-semibold text-cyan-300">Atractiva (Signos opuestos)</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Controls for Quiver -->
+        <div class="glass-card rounded-2xl p-3 border border-slate-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div class="flex items-center gap-4">
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="check-show-equipotential" checked class="rounded bg-slate-900 border-slate-700 text-brand-500 focus:ring-0">
+              <span class="text-slate-300">Líneas Equipotenciales</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" id="check-show-vectors" checked class="rounded bg-slate-900 border-slate-700 text-brand-500 focus:ring-0">
+              <span class="text-slate-300">Vectores de Campo $\vec{E}$</span>
+            </label>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <div class="flex items-center gap-2">
+              <span class="text-slate-400">Densidad de Vectores:</span>
+              <select id="select-vector-density" class="bg-slate-900 border border-slate-800 rounded px-2 py-0.5 text-xs text-slate-300">
+                <option value="15">Baja (15×15)</option>
+                <option value="19" selected>Media (19×19)</option>
+                <option value="23">Alta (23×23)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vector Field Plotly Plot -->
+        <div class="glass-card rounded-2xl p-2 sm:p-3 border border-slate-800 relative">
+          <div id="plot-module-2" class="w-full h-[520px] rounded-xl overflow-hidden"></div>
+          
+          <div class="absolute bottom-4 left-4 bg-slate-950/80 backdrop-blur px-2.5 py-1 rounded-md border border-slate-800 text-[11px] text-slate-400">
+            <span class="font-semibold text-slate-200">Leyenda:</span> Las flechas indican la dirección de $\vec{E} = -\nabla V$, siempre perpendicular a las equipotenciales.
+          </div>
+        </div>
+
+        <!-- Educational Insight (Cap. 21 y §23.5) -->
+        <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300 leading-relaxed flex items-start gap-3">
+          <i class="fa-solid fa-compass-drafting text-lg text-pink-400 mt-0.5"></i>
+          <div>
+            <span class="font-semibold text-white">Cálculo Numérico por Gradiente (Diferencias Finitas Centrales):</span>
+            A partir de la malla discreta de potencial $V$, el campo vectorial se evalúa numéricamente como:
+            <span class="font-mono text-pink-300 font-semibold"> $E_x(i,j) \approx -\frac{V(i+1,j) - V(i-1,j)}{2\Delta x}$</span> y 
+            <span class="font-mono text-pink-300 font-semibold"> $E_y(i,j) \approx -\frac{V(i,j+1) - V(i,j-1)}{2\Delta y}$</span>.
+            Esto demuestra que el campo electrostático apunta rigurosamente hacia la dirección de máximo descenso de potencial, y su intensidad es inversamente proporcional a la separación de las líneas equipotenciales.
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ================= MODULE 3: LEY DE GAUSS Y FLUJO ELÉCTRICO ================= -->
+      <section id="module-3" class="module-tab-content hidden space-y-4">
+
+        <!-- Gauss Invariance Banner -->
+        <div class="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/70 via-slate-900 to-emerald-950/70 border border-emerald-500/40 text-xs text-slate-200 shadow-lg flex items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center text-xl shrink-0">
+              <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div>
+              <h4 class="font-bold text-white text-sm flex items-center gap-2">
+                Demostración de Invarianza: Ley de Gauss (Cap. 22)
+              </h4>
+              <p class="text-slate-300 text-[11px] mt-0.5" id="gauss-invariance-msg">
+                El flujo total a través de la superficie gaussiana depende <strong class="text-emerald-300">exclusivamente</strong> de la carga neta interior $Q_{\text{enc}}$.
+              </p>
+            </div>
+          </div>
+          
+          <div class="text-right shrink-0 font-mono">
+            <div class="text-[10px] text-slate-400">Constante $\epsilon_0$:</div>
+            <div class="text-xs text-emerald-400 font-semibold">8.854 × 10⁻¹² C²/N·m²</div>
+          </div>
+        </div>
+
+        <!-- Metrics Live Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          
+          <div class="glass-card rounded-xl p-3 border border-slate-800">
+            <div class="text-[11px] text-slate-400">Carga Encerrada $Q_{\text{enc}}$</div>
+            <div id="gauss-qenc" class="text-base font-mono font-bold text-emerald-300 mt-1">0.00 nC</div>
+            <div class="text-[10px] text-slate-500 mt-0.5" id="gauss-qenc-si">0.00 × 10⁻⁹ C</div>
+          </div>
+
+          <div class="glass-card rounded-xl p-3 border border-slate-800">
+            <div class="text-[11px] text-slate-400">Flujo Teórico $\Phi_E$</div>
+            <div id="gauss-flux" class="text-base font-mono font-bold text-brand-300 mt-1">0.00 N·m²/C</div>
+            <div class="text-[10px] text-slate-500 mt-0.5 font-mono">$\Phi_E = Q_{\text{enc}} / \epsilon_0$</div>
+          </div>
+
+          <div class="glass-card rounded-xl p-3 border border-slate-800">
+            <div class="text-[11px] text-slate-400">Área Esfera Gaussiana $4\pi R^2$</div>
+            <div id="gauss-area" class="text-base font-mono font-bold text-indigo-300 mt-1">3.142 m²</div>
+            <div class="text-[10px] text-slate-500 mt-0.5 font-mono" id="gauss-radius-disp">R = 0.50 m</div>
+          </div>
+
+          <div class="glass-card rounded-xl p-3 border border-slate-800">
+            <div class="text-[11px] text-slate-400">Magnitud Media $|\vec{E}|_{\text{sup}}$</div>
+            <div id="gauss-eavg" class="text-base font-mono font-bold text-amber-300 mt-1">0.00 N/C</div>
+            <div class="text-[10px] text-slate-500 mt-0.5 font-mono">$\Phi_E / (4\pi R^2)$</div>
+          </div>
+
+        </div>
+
+        <!-- Charges Inside/Outside Status Tags -->
+        <div class="flex flex-wrap items-center justify-between gap-2 px-2 text-xs">
+          <div class="flex items-center gap-3">
+            <span class="text-slate-400">Estado de Cargas:</span>
+            <div id="badge-charge-1-status" class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/40 flex items-center gap-1.5">
+              <i class="fa-solid fa-circle text-[8px]"></i>
+              <span>q₁: DENTRO de la superficie</span>
+            </div>
+            <div id="badge-charge-2-status" class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center gap-1.5">
+              <i class="fa-solid fa-circle text-[8px]"></i>
+              <span>q₂: FUERA de la superficie</span>
+            </div>
+          </div>
+
+          <div class="text-slate-400 text-xs flex items-center gap-1">
+            <i class="fa-solid fa-arrows-spin text-emerald-400"></i>
+            <span>Desliza $R$ para ver la invariancia en tiempo real.</span>
+          </div>
+        </div>
+
+        <!-- Gauss Plot Container -->
+        <div class="glass-card rounded-2xl p-2 sm:p-3 border border-slate-800 relative">
+          <div id="plot-module-3" class="w-full h-[520px] rounded-xl overflow-hidden"></div>
+          
+          <div class="absolute bottom-4 left-4 bg-slate-950/80 backdrop-blur px-2.5 py-1 rounded-md border border-slate-800 text-[11px] text-slate-300 flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full border-2 border-emerald-400 inline-block"></span>
+            <span>Círculo Verde: Superficie Gaussiana de radio $R$. El sombreado interior delimita el volumen que aporta al flujo.</span>
+          </div>
+        </div>
+
+        <!-- Explanation of Gauss Principle -->
+        <div class="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800 text-xs text-slate-300 leading-relaxed flex items-start gap-3">
+          <i class="fa-solid fa-atom text-lg text-emerald-400 mt-0.5"></i>
+          <div>
+            <span class="font-semibold text-white">Ley de Gauss (Sears & Zemansky Cap. 22):</span>
+            El flujo del campo eléctrico $\Phi_E = \oint \vec{E} \cdot d\vec{A}$ a través de cualquier superficie cerrada es proporcional a la carga neta total encerrada dividida por la permitividad del vacío $\epsilon_0$. Si varías el radio $R$ de la superficie sin que ninguna carga cruce la frontera, el área $A$ cambia proporcional a $R^2$ y el campo medio decae como $1/R^2$, compensándose con exactitud matemática rigurosa para mantener $\Phi_E$ invariante.
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="border-t border-slate-800/80 bg-slate-950/90 py-3 px-4 text-center text-xs text-slate-500">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span class="font-semibold text-slate-400">GradVolt Web 3D</span>
+        <span>•</span>
+        <span>Física Universitaria Sears & Zemansky (Caps. 21, 22, 23)</span>
+      </div>
+      <div>
+        <span>Feria de Ciencias & Física Computacional</span>
+        <span class="mx-1">|</span>
+        <span class="text-brand-400">Despliegue directo en GitHub Pages</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ================= THEORY MODAL ================= -->
+  <div id="modal-theory" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="glass-card max-w-2xl w-full max-h-[85vh] overflow-y-auto rounded-2xl border border-slate-700 p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-brand-500/20 text-brand-400 flex items-center justify-center">
+            <i class="fa-solid fa-book-open"></i>
+          </div>
+          <h3 class="text-lg font-bold text-white">Fundamento Físico: Sears & Zemansky</h3>
+        </div>
+        <button id="btn-close-theory" class="text-slate-400 hover:text-white text-lg p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 text-xs text-slate-300 leading-relaxed">
+        <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+          <h4 class="font-bold text-rose-400 text-sm mb-1">1. Capítulo 21: Ley de Coulomb y Campo Eléctrico</h4>
+          <p>
+            La fuerza electrostática entre dos cargas puntuales viene dada por:
+            <span class="font-mono text-amber-300 block my-1">$$F = k \frac{|q_1 q_2|}{r^2}$$</span>
+            donde $k = \frac{1}{4\pi\epsilon_0} \approx 8.988 \times 10^9\,\text{N}\cdot\text{m}^2/\text{C}^2$. Es repulsiva para cargas de igual signo y atractiva para cargas de signos opuestos.
+          </p>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+          <h4 class="font-bold text-emerald-400 text-sm mb-1">2. Capítulo 22: Ley de Gauss y Flujo Eléctrico</h4>
+          <p>
+            El flujo eléctrico total que atraviesa cualquier superficie cerrada (superficie gaussiana) es:
+            <span class="font-mono text-emerald-300 block my-1">$$\Phi_E = \oint \vec{E} \cdot d\vec{A} = \frac{Q_{\text{enc}}}{\epsilon_0}$$</span>
+            donde $\epsilon_0 \approx 8.854 \times 10^{-12}\,\text{C}^2/(\text{N}\cdot\text{m}^2)$. Si la carga neta en su interior es cero, el flujo neto entrante cancela al saliente ($\Phi_E = 0$).
+          </p>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-900/80 border border-slate-800">
+          <h4 class="font-bold text-sky-400 text-sm mb-1">3. Capítulo 23: Potencial Eléctrico y Gradiente del Campo (§23.5)</h4>
+          <p>
+            El potencial eléctrico escalar es:
+            <span class="font-mono text-sky-300 block my-1">$$V(x,y) = \sum_{i} \frac{k q_i}{\sqrt{(x-x_i)^2 + (y-y_i)^2 + \epsilon^2}}$$</span>
+            El campo vectorial se obtiene del gradiente negativo del potencial:
+            <span class="font-mono text-sky-300 block my-1">$$\vec{E} = -\nabla V = -\left(\frac{\partial V}{\partial x}\hat{i} + \frac{\partial V}{\partial y}\hat{j}\right)$$</span>
+            Numéricamente, evaluamos este gradiente usando aproximación de diferencias finitas centrales de segundo orden.
+          </p>
+        </div>
+      </div>
+
+      <div class="text-right pt-2 border-t border-slate-800">
+        <button id="btn-close-theory-2" class="px-4 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white font-medium text-xs">
+          Entendido
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Main JavaScript File -->
+  <script src="app.js"></script>
+</body>
+</html>
