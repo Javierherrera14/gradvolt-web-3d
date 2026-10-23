@@ -1,10 +1,12 @@
 /* ========================================================
    GradVolt Web 3D - Modern Physics Dark Theme Stylesheet
+   Based on Sears-Zemansky Computational Electromagnetism
    ======================================================== */
 
 :root {
-  --color-q1: #f43f5e;
-  --color-q2: #06b6d4;
+  --color-pos: #f43f5e;
+  --color-neg: #06b6d4;
+  --color-neutral: #94a3b8;
   --color-gauss: #10b981;
   --color-brand: #38bdf8;
   --bg-dark: #090d16;
@@ -14,9 +16,9 @@
 body {
   background-color: var(--bg-dark);
   background-image: 
-    radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.08) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(244, 63, 94, 0.07) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.06) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(14, 165, 233, 0.09) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(244, 63, 94, 0.08) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(16, 185, 129, 0.07) 0px, transparent 50%);
   background-attachment: fixed;
   color: #f1f5f9;
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -25,7 +27,7 @@ body {
 
 /* Glassmorphism Cards */
 .glass-card {
-  background: rgba(15, 23, 42, 0.72);
+  background: rgba(15, 23, 42, 0.75);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
@@ -33,7 +35,7 @@ body {
 }
 
 .glass-card:hover {
-  box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(56, 189, 248, 0.08);
+  box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.5), 0 0 15px rgba(56, 189, 248, 0.1);
 }
 
 /* Interactive Tabs */
@@ -51,8 +53,8 @@ body {
 }
 
 .tab-btn.active {
-  background: linear-gradient(135deg, rgba(14, 165, 233, 0.2) 0%, rgba(99, 102, 241, 0.2) 100%);
-  border-color: rgba(56, 189, 248, 0.6);
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.22) 0%, rgba(99, 102, 241, 0.22) 100%);
+  border-color: rgba(56, 189, 248, 0.65);
   color: #ffffff;
   box-shadow: 0 0 15px rgba(56, 189, 248, 0.25);
 }
@@ -69,6 +71,17 @@ body {
 
 .scenario-btn:active {
   transform: translateY(0);
+}
+
+/* Segmented Buttons / Pill Toggles */
+.segmented-pill {
+  transition: all 0.2s ease;
+}
+
+.segmented-pill.active {
+  background: #0284c7;
+  color: #ffffff;
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
 }
 
 /* Modern Range Slider Styling */
@@ -100,17 +113,17 @@ body {
 .range-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   cursor: pointer;
-  margin-top: -6px;
+  margin-top: -5px;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .range-slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
   cursor: pointer;
   border: none;
@@ -125,24 +138,51 @@ body {
   transform: scale(1.25);
 }
 
-/* Specific Accent Thumbs */
-#slider-q1::-webkit-slider-thumb,
-#slider-x1::-webkit-slider-thumb,
-#slider-y1::-webkit-slider-thumb {
+/* Slider Thumb Accents */
+.slider-accent-pos::-webkit-slider-thumb {
   background: #f43f5e;
   box-shadow: 0 0 10px rgba(244, 63, 94, 0.7);
 }
-
-#slider-q2::-webkit-slider-thumb,
-#slider-x2::-webkit-slider-thumb,
-#slider-y2::-webkit-slider-thumb {
+.slider-accent-neg::-webkit-slider-thumb {
   background: #06b6d4;
   box-shadow: 0 0 10px rgba(6, 182, 212, 0.7);
 }
-
-#slider-radius::-webkit-slider-thumb {
+.slider-accent-neutral::-webkit-slider-thumb {
+  background: #94a3b8;
+  box-shadow: 0 0 8px rgba(148, 163, 184, 0.5);
+}
+.slider-accent-gauss::-webkit-slider-thumb {
   background: #10b981;
   box-shadow: 0 0 10px rgba(16, 185, 129, 0.7);
+}
+
+/* Charge Cards Dynamic List */
+.charge-card {
+  transition: border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.charge-card:hover {
+  transform: translateY(-1px);
+}
+
+.charge-card.charge-positive {
+  border-color: rgba(244, 63, 94, 0.25);
+}
+.charge-card.charge-positive:hover {
+  border-color: rgba(244, 63, 94, 0.5);
+  box-shadow: 0 4px 15px -3px rgba(244, 63, 94, 0.15);
+}
+
+.charge-card.charge-negative {
+  border-color: rgba(6, 182, 212, 0.25);
+}
+.charge-card.charge-negative:hover {
+  border-color: rgba(6, 182, 212, 0.5);
+  box-shadow: 0 4px 15px -3px rgba(6, 182, 212, 0.15);
+}
+
+.charge-card.charge-neutral {
+  border-color: rgba(148, 163, 184, 0.25);
 }
 
 /* Animations */
@@ -152,7 +192,7 @@ body {
 }
 
 .animate-spin-slow {
-  animation: spinSlow 12s linear infinite;
+  animation: spinSlow 14s linear infinite;
 }
 
 /* Custom Scrollbars */
