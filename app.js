@@ -21,6 +21,7 @@
       { id: 2, q: -5.0, x: 0.40, y: 0.00, z: 0.00 }
     ],
     nextChargeId: 3,
+    placingCharge: false,
     radius: 0.50, // Gaussian surface radius (m)
     resolution: 41, // N x N mesh grid
     activeTab: 'module-1',
@@ -501,7 +502,7 @@
                   <span>Pos $x_{${chargeNum}}$</span>
                   <span class="font-mono text-slate-300 charge-label-x">${c.x.toFixed(2)} m</span>
                 </div>
-                <input type="range" min="-0.9" max="0.9" step="0.05" value="${c.x}" class="w-full range-slider charge-slider-x" data-id="${c.id}">
+                <input type="range" min="-0.9" max="0.9" step="0.05" value="${c.x}" class="w-full range-slider ${sliderAccent} charge-slider-x" data-id="${c.id}">
               </div>
 
               <div>
@@ -509,7 +510,7 @@
                   <span>Pos $y_{${chargeNum}}$</span>
                   <span class="font-mono text-slate-300 charge-label-y">${c.y.toFixed(2)} m</span>
                 </div>
-                <input type="range" min="-0.9" max="0.9" step="0.05" value="${c.y}" class="w-full range-slider charge-slider-y" data-id="${c.id}">
+                <input type="range" min="-0.9" max="0.9" step="0.05" value="${c.y}" class="w-full range-slider ${sliderAccent} charge-slider-y" data-id="${c.id}">
               </div>
             </div>
           </div>
@@ -627,6 +628,73 @@
   }
 
   /**
+   * Updates Add Charge button UI and cursor according to placingCharge state
+   */
+  function updateAddButtonUI() {
+    const btn = elements.btnAddCharge;
+    const plots = [elements.plotM1, elements.plotM2, elements.plotM3];
+
+    if (state.placingCharge) {
+      if (btn) {
+        btn.innerHTML = `<span>📍 Haz clic en el mapa para ubicar (o clic aquí para pos. automática)</span>`;
+        btn.classList.add('ring-2', 'ring-brand-400');
+      }
+      plots.forEach(el => {
+        if (el) {
+          el.style.cursor = 'crosshair';
+          el.classList.add('placing-charge-active');
+        }
+      });
+    } else {
+      if (btn) {
+        btn.innerHTML = `<i class="fa-solid fa-circle-plus mr-1"></i><span>+ Agregar Carga (<span id="btn-count-display">${state.charges.length}</span>/10)</span>`;
+        btn.classList.remove('ring-2', 'ring-brand-400');
+        elements.btnCountDisplay = document.getElementById('btn-count-display');
+      }
+      plots.forEach(el => {
+        if (el) {
+          el.style.cursor = '';
+          el.classList.remove('placing-charge-active');
+        }
+      });
+    }
+  }
+
+  /**
+   * Attaches Plotly click handler to plot element to place charges interactively
+   * Note: Invoked strictly after Plotly.newPlot to ensure plotEl is initialized.
+   */
+  function attachPlotClickHandler(plotEl) {
+    if (!plotEl || typeof plotEl.on !== 'function') return;
+
+    if (typeof plotEl.removeAllListeners === 'function') {
+      plotEl.removeAllListeners("plotly_click");
+    }
+
+    plotEl.on("plotly_click", function (data) {
+      if (!state.placingCharge) return;
+      if (!data || !data.points || !data.points.length) return;
+
+      const pt = data.points[0];
+      if (typeof pt.x !== 'number' || typeof pt.y !== 'number') return;
+      if (isNaN(pt.x) || isNaN(pt.y)) return;
+
+      const clampAndRound = val => Math.max(-0.90, Math.min(0.90, Math.round(val / 0.05) * 0.05));
+      const newX = parseFloat(clampAndRound(pt.x).toFixed(2));
+      const newY = parseFloat(clampAndRound(pt.y).toFixed(2));
+      const newQ = (state.charges.length % 2 === 0) ? 5.0 : -5.0;
+
+      const added = addNewCharge(newQ, newX, newY);
+      state.placingCharge = false;
+      updateAddButtonUI();
+
+      if (added) {
+        showToast(`Carga puntual q${state.charges.length} ubicada en (${newX >= 0 ? '+' : ''}${newX}, ${newY >= 0 ? '+' : ''}${newY}) m.`, 'success');
+      }
+    });
+  }
+
+  /**
    * Adds a new charge with specific parameters
    */
   function addNewCharge(q, x, y) {
@@ -647,6 +715,7 @@
     state.importedFromCsv = false;
     renderChargesList();
     updateCoulombDropdowns();
+    updateAddButtonUI();
     scheduleUpdate();
     return true;
   }
@@ -660,16 +729,24 @@
       return;
     }
 
-    const count = state.charges.length;
-    // Distribute nicely along an orbit to avoid placing right on top of another charge
-    const angle = (count * 2 * Math.PI) / 8;
-    const newX = parseFloat((0.45 * Math.cos(angle)).toFixed(2));
-    const newY = parseFloat((0.45 * Math.sin(angle)).toFixed(2));
-    const newQ = (count % 2 === 0) ? 5.0 : -5.0;
+    if (!state.placingCharge) {
+      state.placingCharge = true;
+      updateAddButtonUI();
+      showToast('Haz clic sobre la gráfica para colocar la carga puntual (o clic aquí para posición automática).', 'info');
+    } else {
+      state.placingCharge = false;
+      const count = state.charges.length;
+      // Distribute nicely along an orbit to avoid placing right on top of another charge
+      const angle = (count * 2 * Math.PI) / 8;
+      const newX = parseFloat((0.45 * Math.cos(angle)).toFixed(2));
+      const newY = parseFloat((0.45 * Math.sin(angle)).toFixed(2));
+      const newQ = (count % 2 === 0) ? 5.0 : -5.0;
 
-    const added = addNewCharge(newQ, newX, newY);
-    if (added) {
-      showToast(`Carga puntual q${state.charges.length} agregada (${newQ >= 0 ? '+' : ''}${newQ} nC en x=${newX}, y=${newY} m).`, 'success');
+      const added = addNewCharge(newQ, newX, newY);
+      updateAddButtonUI();
+      if (added) {
+        showToast(`Carga puntual q${state.charges.length} agregada (${newQ >= 0 ? '+' : ''}${newQ} nC en x=${newX}, y=${newY} m).`, 'success');
+      }
     }
   }
 
@@ -688,6 +765,7 @@
 
     renderChargesList();
     updateCoulombDropdowns();
+    updateAddButtonUI();
     scheduleUpdate();
     showToast('Carga eliminada correctamente.', 'info');
   }
@@ -763,6 +841,7 @@
         Plotly.purge(plotEl);
         Plotly.newPlot(plotEl, data, layout, plotlyConfig);
         plotEl._currentMode = '3d';
+        attachPlotClickHandler(plotEl);
       } else {
         Plotly.react(plotEl, data, layout, plotlyConfig);
       }
@@ -815,10 +894,164 @@
         Plotly.purge(plotEl);
         Plotly.newPlot(plotEl, data, layout, plotlyConfig);
         plotEl._currentMode = 'contour';
+        attachPlotClickHandler(plotEl);
       } else {
         Plotly.react(plotEl, data, layout, plotlyConfig);
       }
     }
+  }
+
+  /**
+   * Generates continuous electric field streamlines via step-by-step RK2 integration (ds = 0.025)
+   * with directional arrowheads at 35% and 70% of each curve indicating the exact E field direction.
+   * Sears & Zemansky Chapters 21-23.
+   */
+  function buildFieldStreamlines() {
+    const ds = 0.025; // integration step in meters
+    const maxSteps = 120; // maximum RK2 steps per streamline
+    const linesPerCharge = 12;
+    const launchRadius = 0.045; // initial offset from charge center in meters
+    const collisionDist = 0.06; // stop when within 0.06 m of another charge
+
+    const posCharges = state.charges.filter(c => c.q > 0.01);
+    const negCharges = state.charges.filter(c => c.q < -0.01);
+
+    // If positive charges exist, emanate forward from positive charges.
+    // If only negative charges exist, emanate backwards from negative charges.
+    let seedCharges = [];
+    let isReverse = false;
+
+    if (posCharges.length > 0) {
+      seedCharges = posCharges;
+      isReverse = false;
+    } else if (negCharges.length > 0) {
+      seedCharges = negCharges;
+      isReverse = true;
+    } else {
+      return { lineX: [], lineY: [], lineZ: [] };
+    }
+
+    const lineX = [];
+    const lineY = [];
+    const lineZ = [];
+
+    // Evaluates normalized field direction
+    function getUnitE(x, y, sign) {
+      const field = evaluateElectricFieldAt(x, y, 0);
+      if (field.mag < 1e-6) return null;
+      return {
+        ux: (field.ex / field.mag) * sign,
+        uy: (field.ey / field.mag) * sign
+      };
+    }
+
+    // Appends a directional arrowhead pointing along (ux, uy) with tip at (tipX, tipY)
+    function addArrowHead(tipX, tipY, ux, uy) {
+      const arrowLen = 0.032;
+      const angle = 0.45;
+      const w1x = tipX - arrowLen * (ux * Math.cos(angle) - uy * Math.sin(angle));
+      const w1y = tipY - arrowLen * (uy * Math.cos(angle) + ux * Math.sin(angle));
+      const w2x = tipX - arrowLen * (ux * Math.cos(-angle) - uy * Math.sin(-angle));
+      const w2y = tipY - arrowLen * (uy * Math.cos(-angle) + ux * Math.sin(-angle));
+
+      lineX.push(w1x, tipX, w2x, null);
+      lineY.push(w1y, tipY, w2y, null);
+      lineZ.push(0.0, 0.0, 0.0, null);
+    }
+
+    const sign = isReverse ? -1 : 1;
+
+    seedCharges.forEach(seedC => {
+      for (let k = 0; k < linesPerCharge; k++) {
+        const theta = (k / linesPerCharge) * 2 * Math.PI;
+        const x0 = seedC.x + launchRadius * Math.cos(theta);
+        const y0 = seedC.y + launchRadius * Math.sin(theta);
+
+        const curvePts = [{ x: x0, y: y0 }];
+        let currX = x0;
+        let currY = y0;
+
+        for (let step = 0; step < maxSteps; step++) {
+          // RK2 - Step 1: evaluate at current point
+          const u1 = getUnitE(currX, currY, sign);
+          if (!u1) break;
+
+          // Midpoint evaluation
+          const midX = currX + 0.5 * ds * u1.ux;
+          const midY = currY + 0.5 * ds * u1.uy;
+
+          // RK2 - Step 2: evaluate at midpoint
+          const u2 = getUnitE(midX, midY, sign);
+          if (!u2) break;
+
+          const nextX = currX + ds * u2.ux;
+          const nextY = currY + ds * u2.uy;
+
+          // Check domain bounds [-1.0, 1.0]
+          if (nextX < -1.0 || nextX > 1.0 || nextY < -1.0 || nextY > 1.0) {
+            curvePts.push({ x: nextX, y: nextY });
+            break;
+          }
+
+          // Check collision with another charge (< 0.06 m)
+          let collided = false;
+          for (const ch of state.charges) {
+            if (ch.id === seedC.id && step < 2) continue; // ignore origin charge on takeoff
+            const dist = Math.hypot(nextX - ch.x, nextY - ch.y);
+            if (dist < collisionDist) {
+              collided = true;
+              break;
+            }
+          }
+
+          curvePts.push({ x: nextX, y: nextY });
+          if (collided) break;
+
+          currX = nextX;
+          currY = nextY;
+        }
+
+        if (curvePts.length < 2) continue;
+
+        // If reverse integration from negative charges, reverse order so points flow toward charge
+        if (isReverse) {
+          curvePts.reverse();
+        }
+
+        // Add streamline points to line array
+        for (let i = 0; i < curvePts.length; i++) {
+          lineX.push(curvePts[i].x);
+          lineY.push(curvePts[i].y);
+          lineZ.push(0.0);
+        }
+        lineX.push(null);
+        lineY.push(null);
+        lineZ.push(null);
+
+        // Add directional arrowheads at 35% and 70% of the streamline curve
+        const nPts = curvePts.length;
+        if (nPts >= 4) {
+          const arrowIndices = [
+            Math.max(1, Math.floor(nPts * 0.35)),
+            Math.min(nPts - 2, Math.floor(nPts * 0.70))
+          ];
+
+          const uniqueIndices = Array.from(new Set(arrowIndices));
+
+          uniqueIndices.forEach(idx => {
+            const pt = curvePts[idx];
+            const field = evaluateElectricFieldAt(pt.x, pt.y, 0);
+            if (field.mag > 1e-6) {
+              const ux = field.ex / field.mag;
+              const uy = field.ey / field.mag;
+              addArrowHead(pt.x, pt.y, ux, uy);
+            }
+          });
+        }
+      }
+    });
+
+    return { lineX, lineY, lineZ };
   }
 
   // --- Helper to build 2D vector quiver lines ---
@@ -913,6 +1146,22 @@
         showscale: false
       });
 
+      // 3D Continuous Field Streamlines with directional arrows at z = 0
+      const streamlines3D = buildFieldStreamlines();
+      if (streamlines3D.lineX.length > 0) {
+        data.push({
+          type: 'scatter3d',
+          mode: 'lines',
+          x: streamlines3D.lineX,
+          y: streamlines3D.lineY,
+          z: streamlines3D.lineZ,
+          line: { color: '#38bdf8', width: 3 },
+          name: 'Líneas de Campo Continuas',
+          hoverinfo: 'none',
+          showlegend: true
+        });
+      }
+
       // 3D Charge spheres at z = 0
       data.push({
         type: 'scatter3d',
@@ -962,6 +1211,7 @@
         Plotly.purge(plotEl);
         Plotly.newPlot(plotEl, data, layout, plotlyConfig);
         plotEl._currentMode = '3d';
+        attachPlotClickHandler(plotEl);
       } else {
         Plotly.react(plotEl, data, layout, plotlyConfig);
       }
@@ -984,6 +1234,21 @@
           line: { width: 1, color: 'rgba(255,255,255,0.45)' },
           colorbar: { title: { text: 'V (V)', font: { color: '#e2e8f0', size: 11 } }, thickness: 14, len: 0.8 },
           hoverinfo: 'x+y+z'
+        });
+      }
+
+      // Continuous Field Streamlines with directional arrows in 2D
+      const streamlines2D = buildFieldStreamlines();
+      if (streamlines2D.lineX.length > 0) {
+        data.push({
+          type: 'scatter',
+          mode: 'lines',
+          x: streamlines2D.lineX,
+          y: streamlines2D.lineY,
+          line: { color: '#0ea5e9', width: 2.2 },
+          name: 'Líneas de Campo Continuas',
+          hoverinfo: 'none',
+          showlegend: true
         });
       }
 
@@ -1045,6 +1310,7 @@
         Plotly.purge(plotEl);
         Plotly.newPlot(plotEl, data, layout, plotlyConfig);
         plotEl._currentMode = '2d';
+        attachPlotClickHandler(plotEl);
       } else {
         Plotly.react(plotEl, data, layout, plotlyConfig);
       }
@@ -1161,6 +1427,22 @@
         hoverinfo: 'none'
       });
 
+      // 3D Continuous Field Streamlines with directional arrows at z = 0
+      const streamlines3D = buildFieldStreamlines();
+      if (streamlines3D.lineX.length > 0) {
+        data.push({
+          type: 'scatter3d',
+          mode: 'lines',
+          x: streamlines3D.lineX,
+          y: streamlines3D.lineY,
+          z: streamlines3D.lineZ,
+          line: { color: '#38bdf8', width: 3 },
+          name: 'Líneas de Campo Continuas',
+          hoverinfo: 'none',
+          showlegend: true
+        });
+      }
+
       // 4. All Charges in 3D with Inside/Outside status
       const chargeX = [];
       const chargeY = [];
@@ -1211,11 +1493,27 @@
         Plotly.purge(plotEl);
         Plotly.newPlot(plotEl, data, layout, plotlyConfig);
         plotEl._currentMode = '3d';
+        attachPlotClickHandler(plotEl);
       } else {
         Plotly.react(plotEl, data, layout, plotlyConfig);
       }
     } else {
       // 2D Cross Section View
+      // Continuous Field Streamlines with directional arrows in 2D
+      const streamlines2D = buildFieldStreamlines();
+      if (streamlines2D.lineX.length > 0) {
+        data.push({
+          type: 'scatter',
+          mode: 'lines',
+          x: streamlines2D.lineX,
+          y: streamlines2D.lineY,
+          line: { color: '#0ea5e9', width: 2.2 },
+          name: 'Líneas de Campo Continuas',
+          hoverinfo: 'none',
+          showlegend: true
+        });
+      }
+
       const quiver = buildQuiverVectors(17, [-0.95, 0.95], [-0.95, 0.95]);
       data.push({
         type: 'scatter',
@@ -1315,6 +1613,7 @@
         Plotly.purge(plotEl);
         Plotly.newPlot(plotEl, data, layout, plotlyConfig);
         plotEl._currentMode = '2d';
+        attachPlotClickHandler(plotEl);
       } else {
         Plotly.react(plotEl, data, layout, plotlyConfig);
       }
@@ -1516,6 +1815,8 @@
         break;
     }
 
+    state.placingCharge = false;
+    updateAddButtonUI();
     renderChargesList();
     updateCoulombDropdowns();
     scheduleUpdate();
@@ -1635,10 +1936,12 @@
         state.resolution = 41;
         state.selectedChargeA = 1;
         state.selectedChargeB = 2;
+        state.placingCharge = false;
         state.importedFromCsv = false;
         if (elements.selectResolution) elements.selectResolution.value = '41';
         renderChargesList();
         updateCoulombDropdowns();
+        updateAddButtonUI();
         scheduleUpdate();
         showToast('Parámetros restablecidos a los valores por defecto.', 'info');
       });

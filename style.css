@@ -118,6 +118,8 @@ body {
   border-radius: 50%;
   cursor: pointer;
   margin-top: -5px;
+  background: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.7);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -127,6 +129,8 @@ body {
   border-radius: 50%;
   cursor: pointer;
   border: none;
+  background: #38bdf8;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.7);
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
@@ -143,7 +147,15 @@ body {
   background: #f43f5e;
   box-shadow: 0 0 10px rgba(244, 63, 94, 0.7);
 }
+.slider-accent-pos::-moz-range-thumb {
+  background: #f43f5e;
+  box-shadow: 0 0 10px rgba(244, 63, 94, 0.7);
+}
 .slider-accent-neg::-webkit-slider-thumb {
+  background: #06b6d4;
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.7);
+}
+.slider-accent-neg::-moz-range-thumb {
   background: #06b6d4;
   box-shadow: 0 0 10px rgba(6, 182, 212, 0.7);
 }
@@ -151,9 +163,23 @@ body {
   background: #94a3b8;
   box-shadow: 0 0 8px rgba(148, 163, 184, 0.5);
 }
+.slider-accent-neutral::-moz-range-thumb {
+  background: #94a3b8;
+  box-shadow: 0 0 8px rgba(148, 163, 184, 0.5);
+}
 .slider-accent-gauss::-webkit-slider-thumb {
   background: #10b981;
   box-shadow: 0 0 10px rgba(16, 185, 129, 0.7);
+}
+.slider-accent-gauss::-moz-range-thumb {
+  background: #10b981;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.7);
+}
+
+/* Placing Charge Mode Crosshair Cursor */
+.placing-charge-active,
+.placing-charge-active * {
+  cursor: crosshair !important;
 }
 
 /* Charge Cards Dynamic List */
