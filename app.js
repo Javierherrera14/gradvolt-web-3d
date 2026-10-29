@@ -439,13 +439,13 @@
     // Colorscale & Resolution
     if (elements.selectColorscale) elements.selectColorscale.value = state.colorscale;
     if (elements.labelResolutionStatus) elements.labelResolutionStatus.textContent = `Malla ${state.resolution}×${state.resolution}`;
-     updatePositionSummary();
-}
+    updatePositionSummary();
+  }
 
-/**
- * Actualiza el panel superior con los vectores de posición de cada carga
- */
-function updatePositionSummary() {
+  /**
+   * Actualiza el panel superior con los vectores de posición de cada carga
+   */
+  function updatePositionSummary() {
     const container = elements.chargesPositionSummary;
     if (!container) return;
 
@@ -490,6 +490,12 @@ function updatePositionSummary() {
   function renderChargesList() {
     const container = elements.chargesListContainer;
     if (!container) return;
+
+    // Detecta si el módulo actual está en vista 3D
+    const is3DView =
+      (state.activeTab === 'module-1' && state.m1ViewMode === '3d') ||
+      (state.activeTab === 'module-2' && state.m2ViewMode === '3d') ||
+      (state.activeTab === 'module-3' && state.m3ViewMode === '3d');
 
     let html = '';
 
@@ -539,31 +545,32 @@ function updatePositionSummary() {
               </div>
             </div>
 
-            <!-- Position Sliders (x, y, z) -->
-         <div class="grid grid-cols-3 gap-1.5 pt-1 border-t border-slate-800/80">
-           <div>
-             <div class="flex justify-between text-[10px] text-slate-400 mb-0.5">
-               <span>$x_{${chargeNum}}$</span>
-               <span class="font-mono text-slate-300 charge-label-x">${c.x.toFixed(2)}</span>
-             </div>
-             <input type="range" min="-0.9" max="0.9" step="0.05" value="${c.x}" class="w-full range-slider ${sliderAccent} charge-slider-x" data-id="${c.id}">
-           </div>
-
-           <div>
-             <div class="flex justify-between text-[10px] text-slate-400 mb-0.5">
-               <span>$y_{${chargeNum}}$</span>
-               <span class="font-mono text-slate-300 charge-label-y">${c.y.toFixed(2)}</span>
-             </div>
-             <input type="range" min="-0.9" max="0.9" step="0.05" value="${c.y}" class="w-full range-slider ${sliderAccent} charge-slider-y" data-id="${c.id}">
-           </div>
-
-           <div>
-             <div class="flex justify-between text-[10px] text-slate-400 mb-0.5">
-               <span>$z_{${chargeNum}}$</span>
-               <span class="font-mono text-indigo-300 charge-label-z">${(c.z || 0).toFixed(2)}</span>
-             </div>
-             <input type="range" min="-0.9" max="0.9" step="0.05" value="${c.z || 0}" class="w-full range-slider ${sliderAccent} charge-slider-z" data-id="${c.id}">
+            <!-- Position Sliders (x, y en 2D | x, y, z en 3D) -->
+            <div class="grid ${is3DView ? 'grid-cols-3' : 'grid-cols-2'} gap-1.5 pt-1 border-t border-slate-800/80">
+              <div>
+                <div class="flex justify-between text-[10px] text-slate-400 mb-0.5">
+                  <span>$x_{${chargeNum}}$</span>
+                  <span class="font-mono text-slate-300 charge-label-x">${c.x.toFixed(2)}</span>
+                </div>
+                <input type="range" min="-0.9" max="0.9" step="0.05" value="${c.x}" class="w-full range-slider ${sliderAccent} charge-slider-x" data-id="${c.id}">
               </div>
+
+              <div>
+                <div class="flex justify-between text-[10px] text-slate-400 mb-0.5">
+                  <span>$y_{${chargeNum}}$</span>
+                  <span class="font-mono text-slate-300 charge-label-y">${c.y.toFixed(2)}</span>
+                </div>
+                <input type="range" min="-0.9" max="0.9" step="0.05" value="${c.y}" class="w-full range-slider ${sliderAccent} charge-slider-y" data-id="${c.id}">
+              </div>
+
+              <div class="${is3DView ? '' : 'hidden'}">
+                <div class="flex justify-between text-[10px] text-slate-400 mb-0.5">
+                  <span>$z_{${chargeNum}}$</span>
+                  <span class="font-mono text-indigo-300 charge-label-z">${(c.z || 0).toFixed(2)}</span>
+                </div>
+                <input type="range" min="-0.9" max="0.9" step="0.05" value="${c.z || 0}" class="w-full range-slider ${sliderAccent} charge-slider-z" data-id="${c.id}">
+              </div>
+            </div>
             </div>
           </div>
         </div>
@@ -633,21 +640,21 @@ function updatePositionSummary() {
       });
     });
     container.querySelectorAll('.charge-slider-z').forEach(input => {
-   input.addEventListener('input', e => {
-     const id = parseInt(e.target.getAttribute('data-id'), 10);
-     const c = state.charges.find(ch => ch.id === id);
-     if (c) {
-       c.z = parseFloat(e.target.value);
-       state.importedFromCsv = false;
-       const card = e.target.closest('.charge-card');
-       if (card) {
-         const labelZ = card.querySelector('.charge-label-z');
-         if (labelZ) labelZ.textContent = `${c.z.toFixed(2)}`;
-       }
-       scheduleUpdate();
-     }
-   });
- });
+      input.addEventListener('input', e => {
+        const id = parseInt(e.target.getAttribute('data-id'), 10);
+        const c = state.charges.find(ch => ch.id === id);
+        if (c) {
+          c.z = parseFloat(e.target.value);
+          state.importedFromCsv = false;
+          const card = e.target.closest('.charge-card');
+          if (card) {
+            const labelZ = card.querySelector('.charge-label-z');
+            if (labelZ) labelZ.textContent = `${c.z.toFixed(2)}`;
+          }
+          scheduleUpdate();
+        }
+      });
+    });
 
     // Delete buttons
     container.querySelectorAll('.btn-delete-charge').forEach(btn => {
@@ -1902,7 +1909,7 @@ function updatePositionSummary() {
     document.querySelectorAll('.module-tab-content').forEach(section => {
       section.classList.toggle('hidden', section.id !== tabId);
     });
-
+    renderChargesList();
     setTimeout(() => {
       if (tabId === 'module-1' && elements.plotM1) Plotly.Plots.resize(elements.plotM1);
       if (tabId === 'module-2' && elements.plotM2) Plotly.Plots.resize(elements.plotM2);
@@ -1916,13 +1923,12 @@ function updatePositionSummary() {
     if (!elements.toastContainer) return;
 
     const toast = document.createElement('div');
-    toast.className = `toast px-4 py-2.5 rounded-xl text-xs font-semibold shadow-xl border flex items-center gap-2 pointer-events-auto transition-all ${
-      type === 'success'
+    toast.className = `toast px-4 py-2.5 rounded-xl text-xs font-semibold shadow-xl border flex items-center gap-2 pointer-events-auto transition-all ${type === 'success'
         ? 'bg-emerald-950/90 text-emerald-200 border-emerald-500/50'
         : type === 'error'
-        ? 'bg-rose-950/90 text-rose-200 border-rose-500/50'
-        : 'bg-slate-900/90 text-sky-200 border-sky-500/50'
-    }`;
+          ? 'bg-rose-950/90 text-rose-200 border-rose-500/50'
+          : 'bg-slate-900/90 text-sky-200 border-sky-500/50'
+      }`;
 
     const icon = type === 'success' ? 'fa-circle-check text-emerald-400' : (type === 'error' ? 'fa-triangle-exclamation text-rose-400' : 'fa-circle-info text-sky-400');
     toast.innerHTML = `<i class="fa-solid ${icon}"></i><span>${message}</span>`;
@@ -2026,6 +2032,7 @@ function updatePositionSummary() {
             Plotly.purge(elements.plotM1);
             elements.plotM1._currentMode = null;
           }
+          renderChargesList();
           scheduleUpdate();
         }
       });
@@ -2040,6 +2047,8 @@ function updatePositionSummary() {
             Plotly.purge(elements.plotM1);
             elements.plotM1._currentMode = null;
           }
+          state.charges.forEach(c => c.z = 0);
+          renderChargesList();
           scheduleUpdate();
         }
       });
@@ -2073,6 +2082,7 @@ function updatePositionSummary() {
             Plotly.purge(elements.plotM2);
             elements.plotM2._currentMode = null;
           }
+          renderChargesList();
           scheduleUpdate();
         }
       });
@@ -2087,6 +2097,8 @@ function updatePositionSummary() {
             Plotly.purge(elements.plotM2);
             elements.plotM2._currentMode = null;
           }
+          state.charges.forEach(c => c.z = 0);
+          renderChargesList();
           scheduleUpdate();
         }
       });
@@ -2138,6 +2150,7 @@ function updatePositionSummary() {
             Plotly.purge(elements.plotM3);
             elements.plotM3._currentMode = null;
           }
+          renderChargesList();
           scheduleUpdate();
         }
       });
@@ -2152,6 +2165,8 @@ function updatePositionSummary() {
             Plotly.purge(elements.plotM3);
             elements.plotM3._currentMode = null;
           }
+          state.charges.forEach(c => c.z = 0);
+          renderChargesList();
           scheduleUpdate();
         }
       });
