@@ -137,7 +137,7 @@
     for (let i = 0; i < len; i++) {
       const c = state.charges[i];
       const qSI = c.q * 1e-9;
-      const r = Math.sqrt((x - c.x) ** 2 + (y - c.y) ** 2 + z * z + EPS_SMOOTH ** 2);
+      const r = Math.sqrt((x - c.x) ** 2 + (y - c.y) ** 2 + (z - (c.z || 0)) ** 2 + EPS_SMOOTH ** 2);
       vTotal += K_COULOMB * (qSI / r);
     }
     return vTotal;
@@ -155,7 +155,7 @@
       const qSI = c.q * 1e-9;
       const dx = x - c.x;
       const dy = y - c.y;
-      const dz = z - 0; // charges are always at z = 0
+      const dz = z - (c.z || 0); // charges are always at z = 0
       const r2 = dx * dx + dy * dy + dz * dz + EPS_SMOOTH * EPS_SMOOTH;
       const r = Math.sqrt(r2);
       const factor = (K_COULOMB * qSI) / (r2 * r);
@@ -374,7 +374,7 @@
     let badgesHtml = '';
 
     state.charges.forEach((c, idx) => {
-      const dist = Math.sqrt(c.x * c.x + c.y * c.y);
+      const dist = Math.sqrt(c.x * c.x + c.y * c.y + (c.z || 0) ** 2);
       const isInside = dist <= R;
 
       if (isInside) {
@@ -446,28 +446,43 @@
  * Actualiza el panel superior con los vectores de posición de cada carga
  */
 function updatePositionSummary() {
-  const container = elements.chargesPositionSummary;
-  if (!container) return;
+    const container = elements.chargesPositionSummary;
+    if (!container) return;
 
-  let html = '';
-  state.charges.forEach((c, idx) => {
-    const isPos = c.q > 0;
-    const isNeg = c.q < 0;
-    const borderClass = isPos
-      ? 'border-rose-500/40 bg-rose-950/20 text-rose-200'
-      : (isNeg ? 'border-cyan-500/40 bg-cyan-950/20 text-cyan-200' : 'border-slate-700 bg-slate-900 text-slate-300');
-    const qColor = isPos ? 'text-rose-400' : (isNeg ? 'text-cyan-400' : 'text-slate-400');
+    // Detecta si la pestaña actual está en modo 3D
+    const is3DView =
+      (state.activeTab === 'module-1' && state.m1ViewMode === '3d') ||
+      (state.activeTab === 'module-2' && state.m2ViewMode === '3d') ||
+      (state.activeTab === 'module-3' && state.m3ViewMode === '3d');
 
-    html += `
-      <div class="px-2 py-1 rounded-lg border ${borderClass} text-[10px] font-mono flex items-center justify-between">
-        <span class="font-bold ${qColor}">r_${idx + 1}:</span>
-        <span>(${c.x >= 0 ? '+' : ''}${c.x.toFixed(2)}, ${c.y >= 0 ? '+' : ''}${c.y.toFixed(2)}) m</span>
-      </div>
-    `;
-  });
+    let html = '';
+    state.charges.forEach((c, idx) => {
+      const isPos = c.q > 0;
+      const isNeg = c.q < 0;
+      const borderClass = isPos
+        ? 'border-rose-500/40 bg-rose-950/20 text-rose-200'
+        : (isNeg ? 'border-cyan-500/40 bg-cyan-950/20 text-cyan-200' : 'border-slate-700 bg-slate-900 text-slate-300');
+      const qColor = isPos ? 'text-rose-400' : (isNeg ? 'text-cyan-400' : 'text-slate-400');
 
-  container.innerHTML = html;
-}
+      const xStr = `${c.x >= 0 ? '+' : ''}${c.x.toFixed(2)}`;
+      const yStr = `${c.y >= 0 ? '+' : ''}${c.y.toFixed(2)}`;
+      const zVal = c.z || 0;
+      const zStr = `${zVal >= 0 ? '+' : ''}${zVal.toFixed(2)}`;
+
+      const coordsText = is3DView
+        ? `(${xStr}, ${yStr}, ${zStr}) m`
+        : `(${xStr}, ${yStr}) m`;
+
+      html += `
+        <div class="px-2 py-1 rounded-lg border ${borderClass} text-[10px] font-mono flex items-center justify-between">
+          <span class="font-bold ${qColor}">r_${idx + 1}:</span>
+          <span>${coordsText}</span>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+  }
 
   /**
    * Renders Dynamic Charge Cards in the Sidebar (Single List, q, x, y Sliders)
@@ -524,22 +539,30 @@ function updatePositionSummary() {
               </div>
             </div>
 
-            <!-- Position Sliders (x, y) -->
-            <div class="grid grid-cols-2 gap-2 pt-1 border-t border-slate-800/80">
-              <div>
-                <div class="flex justify-between text-[10px] text-slate-400 mb-0.5">
-                  <span>Pos $x_{${chargeNum}}$</span>
-                  <span class="font-mono text-slate-300 charge-label-x">${c.x.toFixed(2)} m</span>
-                </div>
-                <input type="range" min="-0.9" max="0.9" step="0.05" value="${c.x}" class="w-full range-slider ${sliderAccent} charge-slider-x" data-id="${c.id}">
-              </div>
+            <!-- Position Sliders (x, y, z) -->
+         <div class="grid grid-cols-3 gap-1.5 pt-1 border-t border-slate-800/80">
+           <div>
+             <div class="flex justify-between text-[10px] text-slate-400 mb-0.5">
+               <span>$x_{${chargeNum}}$</span>
+               <span class="font-mono text-slate-300 charge-label-x">${c.x.toFixed(2)}</span>
+             </div>
+             <input type="range" min="-0.9" max="0.9" step="0.05" value="${c.x}" class="w-full range-slider ${sliderAccent} charge-slider-x" data-id="${c.id}">
+           </div>
 
-              <div>
-                <div class="flex justify-between text-[10px] text-slate-400 mb-0.5">
-                  <span>Pos $y_{${chargeNum}}$</span>
-                  <span class="font-mono text-slate-300 charge-label-y">${c.y.toFixed(2)} m</span>
-                </div>
-                <input type="range" min="-0.9" max="0.9" step="0.05" value="${c.y}" class="w-full range-slider ${sliderAccent} charge-slider-y" data-id="${c.id}">
+           <div>
+             <div class="flex justify-between text-[10px] text-slate-400 mb-0.5">
+               <span>$y_{${chargeNum}}$</span>
+               <span class="font-mono text-slate-300 charge-label-y">${c.y.toFixed(2)}</span>
+             </div>
+             <input type="range" min="-0.9" max="0.9" step="0.05" value="${c.y}" class="w-full range-slider ${sliderAccent} charge-slider-y" data-id="${c.id}">
+           </div>
+
+           <div>
+             <div class="flex justify-between text-[10px] text-slate-400 mb-0.5">
+               <span>$z_{${chargeNum}}$</span>
+               <span class="font-mono text-indigo-300 charge-label-z">${(c.z || 0).toFixed(2)}</span>
+             </div>
+             <input type="range" min="-0.9" max="0.9" step="0.05" value="${c.z || 0}" class="w-full range-slider ${sliderAccent} charge-slider-z" data-id="${c.id}">
               </div>
             </div>
           </div>
@@ -609,6 +632,22 @@ function updatePositionSummary() {
         }
       });
     });
+    container.querySelectorAll('.charge-slider-z').forEach(input => {
+   input.addEventListener('input', e => {
+     const id = parseInt(e.target.getAttribute('data-id'), 10);
+     const c = state.charges.find(ch => ch.id === id);
+     if (c) {
+       c.z = parseFloat(e.target.value);
+       state.importedFromCsv = false;
+       const card = e.target.closest('.charge-card');
+       if (card) {
+         const labelZ = card.querySelector('.charge-label-z');
+         if (labelZ) labelZ.textContent = `${c.z.toFixed(2)}`;
+       }
+       scheduleUpdate();
+     }
+   });
+ });
 
     // Delete buttons
     container.querySelectorAll('.btn-delete-charge').forEach(btn => {
@@ -1197,7 +1236,7 @@ function updatePositionSummary() {
         mode: 'markers+text',
         x: state.charges.map(c => c.x),
         y: state.charges.map(c => c.y),
-        z: state.charges.map(() => 0.0),
+        z: state.charges.map(c => c.z || 0),
         text: state.charges.map((c, idx) => `q${idx + 1} (${c.q >= 0 ? '+' : ''}${c.q.toFixed(1)} nC)`),
         textposition: 'top center',
         textfont: { family: 'Inter', size: 11, color: '#ffffff' },
@@ -1480,12 +1519,13 @@ function updatePositionSummary() {
       const chargeColors = [];
 
       state.charges.forEach((c, idx) => {
-        const dist = Math.sqrt(c.x * c.x + c.y * c.y);
+        const zVal = c.z || 0;
+        const dist = Math.sqrt(c.x * c.x + c.y * c.y + zVal * zVal);
         const isInside = dist <= R;
 
         chargeX.push(c.x);
         chargeY.push(c.y);
-        chargeZ.push(0.0);
+        chargeZ.push(zVal);
         chargeText.push(`q${idx + 1} (${c.q >= 0 ? '+' : ''}${c.q.toFixed(1)} nC)\n[${isInside ? 'DENTRO' : 'FUERA'}]`);
         chargeColors.push(isInside ? (c.q >= 0 ? '#f43f5e' : '#06b6d4') : 'rgba(148, 163, 184, 0.4)');
       });
