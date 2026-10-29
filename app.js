@@ -45,6 +45,7 @@
     btnCountDisplay: document.getElementById('btn-count-display'),
     btnAddCharge: document.getElementById('btn-add-charge'),
     chargesListContainer: document.getElementById('charges-list-container'),
+    chargesPositionSummary: document.getElementById('charges-position-summary'),
 
     // Gauss Radius & resolution
     sliderRadius: document.getElementById('slider-radius'),
@@ -438,7 +439,35 @@
     // Colorscale & Resolution
     if (elements.selectColorscale) elements.selectColorscale.value = state.colorscale;
     if (elements.labelResolutionStatus) elements.labelResolutionStatus.textContent = `Malla ${state.resolution}×${state.resolution}`;
-  }
+     updatePositionSummary();
+}
+
+/**
+ * Actualiza el panel superior con los vectores de posición de cada carga
+ */
+function updatePositionSummary() {
+  const container = elements.chargesPositionSummary;
+  if (!container) return;
+
+  let html = '';
+  state.charges.forEach((c, idx) => {
+    const isPos = c.q > 0;
+    const isNeg = c.q < 0;
+    const borderClass = isPos
+      ? 'border-rose-500/40 bg-rose-950/20 text-rose-200'
+      : (isNeg ? 'border-cyan-500/40 bg-cyan-950/20 text-cyan-200' : 'border-slate-700 bg-slate-900 text-slate-300');
+    const qColor = isPos ? 'text-rose-400' : (isNeg ? 'text-cyan-400' : 'text-slate-400');
+
+    html += `
+      <div class="px-2 py-1 rounded-lg border ${borderClass} text-[10px] font-mono flex items-center justify-between">
+        <span class="font-bold ${qColor}">r_${idx + 1}:</span>
+        <span>(${c.x >= 0 ? '+' : ''}${c.x.toFixed(2)}, ${c.y >= 0 ? '+' : ''}${c.y.toFixed(2)}) m</span>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
 
   /**
    * Renders Dynamic Charge Cards in the Sidebar (Single List, q, x, y Sliders)
